@@ -66,21 +66,19 @@ function dock {
 
     echo $volume
 
-    # mkdir -p $temp
+    curl -so "$temp/$builder" https://gist.githubusercontent.com/markgarrigan/7474e8e6107b599c389721ebe86cbc2d/raw/bd5be53ba4fed97899c652f7fbf62729529ad4a1/node.docker-compose.builder.tpl.yml
+    curl -so "$temp/$compose" https://gist.githubusercontent.com/markgarrigan/175ba41b4eab2d96991fe49604e49d4b/raw/67194fa7ec9f9a147d9aedd247bd09f7998a8353/nginx.node.docker-compose.tpl.yml
 
-    # curl -so "$temp/$builder" https://gist.githubusercontent.com/markgarrigan/7474e8e6107b599c389721ebe86cbc2d/raw/bd5be53ba4fed97899c652f7fbf62729529ad4a1/node.docker-compose.builder.tpl.yml
-    # curl -so "$temp/$compose" https://gist.githubusercontent.com/markgarrigan/175ba41b4eab2d96991fe49604e49d4b/raw/67194fa7ec9f9a147d9aedd247bd09f7998a8353/nginx.node.docker-compose.tpl.yml
+    cp $temp/$builder $builderOut
+    cp $temp/$compose $composeOut
 
-    # cp $temp/$builder $builderOut
-    # cp $temp/$compose $composeOut
+    for option in "${options[@]}"; do
+        sed -i '' 's_'{{$option}}'_'"${!option}"'_g' "$builderOut"
+        sed -i '' 's_'{{$option}}'_'"${!option}"'_g' "$composeOut"
+    done
 
-    # for option in "${options[@]}"; do
-    #     sed -i '' 's_'{{$option}}'_'"${!option}"'_g' "$builderOut"
-    #     sed -i '' 's_'{{$option}}'_'"${!option}"'_g' "$composeOut"
-    # done
-
-    # docker volume create $volume
-    # rm -r $temp
+    docker volume create $volume
+    rm -r $temp
 }
 
 function npm {
