@@ -1,0 +1,123 @@
+#!/bin/bash
+PATH=./node_modules/.bin:$PATH
+
+builderFile="docker-compose.builder.yml"
+composeFile="docker-compose.yml"
+if [ ! -f "$composeFile" ]; then
+    echo "There is no docker compose file in the oven."
+    echo "Try running => bake dock"
+    exit 1
+fi
+if [ ! -f "$builderFile" ]; then
+    echo "There is no docker builder file in the oven."
+    echo "Try running => bake dock"
+    exit 1
+fi
+
+function dock {
+    temp=${temp:-tmp}
+    builder="node.docker-compose.builder.tpl.yml"
+    compose="node.docker-compose.tpl.yml"
+    builderOut="docker-compose.builder.yml"
+    composeOut="docker-compose.yml"
+    image=${image:-node:12.16.2}
+    name=${name:-appname}
+    dir=${dir:-/service/app}
+    volume=${volume:-$(cat /dev/random | LC_CTYPE=C tr -dc "[:alpha:]" | head -c 12)}
+    port=${port:-1234}
+    hot=${hot:-1235}
+    cmd=${cmd:-[\"npm\",\"start\"]}
+
+    options=(image name dir volume port hot cmd temp)
+
+    while [[ "$#" -gt 0 ]]
+    do
+        case $1 in
+        -i|--image)
+            local image="$2"
+            ;;
+        -n|--name)
+            local name="$2"
+            ;;
+        -d|--dir)
+            local dir="$2"
+            ;;
+        -v|--volume)
+            local volume="$2"
+            ;;
+        -p|--port)
+            local port="$2"
+            ;;
+        -h|--hot)
+            local hot="$2"
+            ;;
+        -c|--cmd)
+            local cmd="$2"
+            ;;
+        -t|--temp)
+            local temp="$2"
+            ;;
+        esac
+        shift
+    done
+
+    mkdir -p $temp
+
+    curl -so "$temp/$builder" https://gist.githubusercontent.com/markgarrigan/7474e8e6107b599c389721ebe86cbc2d/raw/bd5be53ba4fed97899c652f7fbf62729529ad4a1/node.docker-compose.builder.tpl.yml
+    curl -so "$temp/$compose" https://gist.githubusercontent.com/markgarrigan/175ba41b4eab2d96991fe49604e49d4b/raw/67194fa7ec9f9a147d9aedd247bd09f7998a8353/nginx.node.docker-compose.tpl.yml
+
+    cp $temp/$builder $builderOut
+    cp $temp/$compose $composeOut
+
+    for option in "${options[@]}"; do
+        sed -i '' 's_'{{$option}}'_'"${!option}"'_g' "$builderOut"
+        sed -i '' 's_'{{$option}}'_'"${!option}"'_g' "$composeOut"
+    done
+
+    docker volume create $volume
+    rm -r $temp
+}
+
+function npm {
+    case $1 in
+    install)
+        echo "Installing npm packages..."
+        docker-compose -f docker-compose.builder.yml run --rm install
+        ;;
+    init)
+        echo "Initializing npm package..."
+        docker-compose -f docker-compose.builder.yml run --rm init
+        ;;
+    build)
+        echo "Running npm build script..."
+        docker-compose -f docker-compose.builder.yml run --rm build
+        ;;
+    *)
+        echo "The npm recipe doesn't have that ingredient"
+    esac
+}
+
+function bash {
+    echo "Entering bash..."
+    docker-compose -f docker-compose.builder.yml run --rm base bash
+}
+
+function up {
+    docker-compose up
+}
+
+function default {
+    up
+}
+
+function help {
+    echo ""
+    echo "bake <recipe> <args>"
+    echo ""
+    echo "Recipes:"
+    compgen -A function | cat -n
+    echo ""
+}
+
+TIMEFORMAT="Baked in %3lR"
+time ${@:-default}
