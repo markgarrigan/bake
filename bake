@@ -77,7 +77,7 @@ function dock {
         sed -i '' 's_'{{$option}}'_'"${!option}"'_g' "$composeOut"
     done
 
-    # docker volume create $volume
+    docker volume create $volume
     rm -r $temp
 }
 
