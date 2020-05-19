@@ -3,6 +3,7 @@ PATH=./node_modules/.bin:$PATH
 
 builderFile="docker-compose.builder.yml"
 composeFile="docker-compose.yml"
+nginxFile="default.conf"
 
 function prep {
     if [ ! -f "$composeFile" ]; then
@@ -17,18 +18,21 @@ function prep {
     fi
 }
 
-function dock {
+function dev {
     temp=${temp:-tmp}
     builder="node.docker-compose.builder.tpl.yml"
     compose="node.docker-compose.tpl.yml"
+    nginx="default.tpl.conf"
     builderOut=$builderFile
     composeOut=$composeFile
+    nginxOut=$nginxFile
     image=${image:-node:12.16.2}
     name=${name:-appname}
     dir=${dir:-/service/app}
     volume=${volume:-$(cat /dev/random | LC_CTYPE=C tr -dc "[:alpha:]" | head -c 12)}
-    port=${port:-1234}
-    hot=${hot:-1235}
+    port=${port:-80}
+    hot=${hot:-8080}
+    ssl=true
     cmd=${cmd:-[\"npm\",\"start\"]}
 
     options=(image name dir volume port hot cmd temp)
@@ -60,6 +64,9 @@ function dock {
         -t|--temp)
             local temp="$2"
             ;;
+        -s|--ssl)
+            local ssl="$2"
+            ;;
         esac
         shift
     done
@@ -67,14 +74,27 @@ function dock {
     mkdir -p $temp
 
     curl -so "$temp/$builder" https://gist.githubusercontent.com/markgarrigan/7474e8e6107b599c389721ebe86cbc2d/raw/bd5be53ba4fed97899c652f7fbf62729529ad4a1/node.docker-compose.builder.tpl.yml
-    curl -so "$temp/$compose" https://gist.githubusercontent.com/markgarrigan/175ba41b4eab2d96991fe49604e49d4b/raw/67194fa7ec9f9a147d9aedd247bd09f7998a8353/nginx.node.docker-compose.tpl.yml
+    
+    if [ "$ssl" = true ]; then
+        mkdir certs
+        cd certs
+        mkcert "$name.loc" "ws.$name.loc"
+        cd ..
+        curl -so "$temp/$compose" https://gist.githubusercontent.com/markgarrigan/175ba41b4eab2d96991fe49604e49d4b/raw/bf1b1d8e47b844c73b216f1046261668dcb7e9a9/nginx.ssl.node.docker-compose.tpl.yml
+        curl -so "$temp/$nginx" https://gist.githubusercontent.com/markgarrigan/e4f7e2baaf085c4382a59478c5dea774/raw/cda3e22601bac16e56c12f02e37d891085d645f6/nginx.parcel.https.tpl.conf
+    else
+        curl -so "$temp/$compose" https://gist.githubusercontent.com/markgarrigan/175ba41b4eab2d96991fe49604e49d4b/raw/bf1b1d8e47b844c73b216f1046261668dcb7e9a9/nginx.node.docker-compose.tpl.yml
+        curl -so "$temp/$nginx" https://gist.githubusercontent.com/markgarrigan/e4f7e2baaf085c4382a59478c5dea774/raw/cda3e22601bac16e56c12f02e37d891085d645f6/nginx.parcel.http.tpl.conf
+    fi
 
     cp $temp/$builder $builderOut
     cp $temp/$compose $composeOut
+    cp $temp/$nginx $nginxOut
 
     for option in "${options[@]}"; do
         sed -i '' 's_'{{$option}}'_'"${!option}"'_g' "$builderOut"
         sed -i '' 's_'{{$option}}'_'"${!option}"'_g' "$composeOut"
+        sed -i '' 's_'{{$option}}'_'"${!option}"'_g' "$nginxOut"
     done
 
     docker volume create $volume
