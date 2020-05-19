@@ -121,6 +121,12 @@ function npm {
     esac
 }
 
+function riot {
+    curl -sS https://github.com/markgarrigan/riotup/archive/master.zip > "$temp/riot.zip"   && \
+    unzip "$temp/riot.zip" -d ./ && \
+    rm "$temp/riot.zip"
+}
+
 function bash {
     prep
     echo "Entering bash..."
