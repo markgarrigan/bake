@@ -5,7 +5,7 @@ builderFile="docker-compose.builder.yml"
 composeFile="docker-compose.yml"
 nginxFile="default.conf"
 
-function prep {
+function :prep {
     if [ ! -f "$composeFile" ]; then
         echo "There is no docker compose file in the oven."
         echo "Try running => bake dock"
@@ -68,6 +68,14 @@ function dev {
             local ssl="$2"
             ;;
         esac
+        case $3 in
+        riot)
+            echo "Building Riot files..."
+            :riot "$name"
+            ;;
+        *)
+            echo "The dev recipe doesn't have the $3 ingredient yet."
+        esac
         shift
     done
 
@@ -80,10 +88,10 @@ function dev {
         cd certs
         mkcert "$name.loc" "ws.$name.loc"
         cd ..
-        curl -so "$temp/$compose" https://gist.githubusercontent.com/markgarrigan/175ba41b4eab2d96991fe49604e49d4b/raw/bf1b1d8e47b844c73b216f1046261668dcb7e9a9/nginx.ssl.node.docker-compose.tpl.yml
+        curl -so "$temp/$compose" https://gist.githubusercontent.com/markgarrigan/175ba41b4eab2d96991fe49604e49d4b/raw/4ef4472a23647a5f83bac52f2b3adb2b50e659e7/nginx.ssl.node.docker-compose.tpl.yml
         curl -so "$temp/$nginx" https://gist.githubusercontent.com/markgarrigan/e4f7e2baaf085c4382a59478c5dea774/raw/cda3e22601bac16e56c12f02e37d891085d645f6/nginx.parcel.https.tpl.conf
     else
-        curl -so "$temp/$compose" https://gist.githubusercontent.com/markgarrigan/175ba41b4eab2d96991fe49604e49d4b/raw/bf1b1d8e47b844c73b216f1046261668dcb7e9a9/nginx.node.docker-compose.tpl.yml
+        curl -so "$temp/$compose" https://gist.githubusercontent.com/markgarrigan/175ba41b4eab2d96991fe49604e49d4b/raw/4ef4472a23647a5f83bac52f2b3adb2b50e659e7/nginx.node.docker-compose.tpl.yml
         curl -so "$temp/$nginx" https://gist.githubusercontent.com/markgarrigan/e4f7e2baaf085c4382a59478c5dea774/raw/cda3e22601bac16e56c12f02e37d891085d645f6/nginx.parcel.http.tpl.conf
     fi
 
@@ -102,7 +110,7 @@ function dev {
 }
 
 function npm {
-    prep
+    :prep
     case $1 in
     install)
         echo "Installing npm packages..."
@@ -121,24 +129,25 @@ function npm {
     esac
 }
 
-function riot {
+function :riot {
     curl -sO https://gist.githubusercontent.com/markgarrigan/424e5418c525e082fde4ed63bc48aa69/raw/64d804bcacc7d905010d87ebd4f7ad8291463bcd/.gitignore
     curl -sO https://gist.githubusercontent.com/markgarrigan/424e5418c525e082fde4ed63bc48aa69/raw/64d804bcacc7d905010d87ebd4f7ad8291463bcd/index.html
     curl -sO https://gist.githubusercontent.com/markgarrigan/424e5418c525e082fde4ed63bc48aa69/raw/64d804bcacc7d905010d87ebd4f7ad8291463bcd/package.json
     curl -sO https://gist.githubusercontent.com/markgarrigan/424e5418c525e082fde4ed63bc48aa69/raw/64d804bcacc7d905010d87ebd4f7ad8291463bcd/riot.config.js
+    sed -i '' 's_'{{name}}'_'"${1}"'_g' "package.json"
     mkdir src
     curl -so src/app.riot https://gist.githubusercontent.com/markgarrigan/424e5418c525e082fde4ed63bc48aa69/raw/64d804bcacc7d905010d87ebd4f7ad8291463bcd/app.riot
-    curl -sO src/index.js https://gist.githubusercontent.com/markgarrigan/424e5418c525e082fde4ed63bc48aa69/raw/64d804bcacc7d905010d87ebd4f7ad8291463bcd/index.js
+    curl -so src/index.js https://gist.githubusercontent.com/markgarrigan/424e5418c525e082fde4ed63bc48aa69/raw/64d804bcacc7d905010d87ebd4f7ad8291463bcd/index.js
 }
 
 function bash {
-    prep
+    :prep
     echo "Entering bash..."
     docker-compose -f docker-compose.builder.yml run --rm base bash
 }
 
 function up {
-    prep
+    :prep
     docker-compose up
 }
 
@@ -151,7 +160,7 @@ function help {
     echo "bake <recipe> <args>"
     echo ""
     echo "Recipes:"
-    compgen -A function | cat -n
+    compgen -A function | grep -v ":" | grep -v "default" | cat -n
     echo ""
 }
 
