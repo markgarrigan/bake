@@ -122,9 +122,13 @@ function npm {
 }
 
 function riot {
-    curl -sS https://github.com/markgarrigan/riotup/archive/master.zip > "$temp/riot.zip"   && \
-    unzip "$temp/riot.zip" -d ./ && \
-    rm "$temp/riot.zip"
+    curl -sO https://gist.githubusercontent.com/markgarrigan/424e5418c525e082fde4ed63bc48aa69/raw/64d804bcacc7d905010d87ebd4f7ad8291463bcd/.gitignore
+    curl -sO https://gist.githubusercontent.com/markgarrigan/424e5418c525e082fde4ed63bc48aa69/raw/64d804bcacc7d905010d87ebd4f7ad8291463bcd/index.html
+    curl -sO https://gist.githubusercontent.com/markgarrigan/424e5418c525e082fde4ed63bc48aa69/raw/64d804bcacc7d905010d87ebd4f7ad8291463bcd/package.json
+    curl -sO https://gist.githubusercontent.com/markgarrigan/424e5418c525e082fde4ed63bc48aa69/raw/64d804bcacc7d905010d87ebd4f7ad8291463bcd/riot.config.js
+    mkdir src
+    curl -so src/app.riot https://gist.githubusercontent.com/markgarrigan/424e5418c525e082fde4ed63bc48aa69/raw/64d804bcacc7d905010d87ebd4f7ad8291463bcd/app.riot
+    curl -sO src/index.js https://gist.githubusercontent.com/markgarrigan/424e5418c525e082fde4ed63bc48aa69/raw/64d804bcacc7d905010d87ebd4f7ad8291463bcd/index.js
 }
 
 function bash {
